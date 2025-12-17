@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,65 +15,135 @@ public class CSVReader {
     
     public static List<Patient> loadPatients(String filePath) {
         List<Patient> patients = new ArrayList<>();
+        int successCount = 0;
+        int errorCount = 0;
+        
+        System.out.println("\n=== CSV READING DEBUG ===");
         
         try (BufferedReader br = new BufferedReader(new FileReader(filePath))) {
             String line;
             boolean isHeader = true;
-            int lineCount = 0;
+            int lineNumber = 0;
             
             while ((line = br.readLine()) != null) {
-                lineCount++;
+                lineNumber++;
+                
                 if (isHeader) {
+                    System.out.println("Header line: " + line);
                     isHeader = false;
                     continue;
                 }
                 
-                String[] data = line.split(",", -1); // Keep empty values
+                System.out.println("\nLine " + lineNumber + ": " + line);
+                
+                // Split CSV line properly
+                String[] data = parseCSVLine(line);
+                System.out.println("Parsed into " + data.length + " columns");
+                
                 if (data.length >= 13) {
                     try {
-                        Patient patient = new Patient(data[0], data[1], data[2]);
+                        // Create patient with first 3 fields
+                        Patient patient = new Patient(
+                            cleanField(data[0]),  // patient_id
+                            cleanField(data[1]),  // first_name
+                            cleanField(data[2])   // last_name
+                        );
                         
-                        if (!data[3].isEmpty()) {
-                            patient.setDateOfBirth(LocalDate.parse(data[3], DATE_FORMATTER));
+                        // Parse date of birth (column 4)
+                        if (!cleanField(data[3]).isEmpty()) {
+                            try {
+                                patient.setDateOfBirth(LocalDate.parse(cleanField(data[3]), DATE_FORMATTER));
+                                System.out.println("  DOB parsed: " + cleanField(data[3]));
+                            } catch (DateTimeParseException e) {
+                                System.out.println("  DOB parse failed: " + cleanField(data[3]));
+                            }
                         }
                         
-                        patient.setNhsNumber(data[4]);
-                        patient.setGender(data[5]);
-                        patient.setPhoneNumber(data[6]);
-                        patient.setEmail(data[7]);
-                        patient.setAddress(data[8]);
-                        patient.setPostcode(data[9]);
-                        patient.setEmergencyContactName(data[10]);
-                        patient.setEmergencyContactPhone(data[11]);
+                        // Set other fields
+                        patient.setNhsNumber(cleanField(data[4]));      // nhs_number
+                        patient.setGender(cleanField(data[5]));         // gender
+                        patient.setPhoneNumber(cleanField(data[6]));    // phone - NOT a date!
+                        patient.setEmail(cleanField(data[7]));          // email
+                        patient.setAddress(cleanField(data[8]));        // address
+                        patient.setPostcode(cleanField(data[9]));       // postcode
+                        patient.setEmergencyContactName(cleanField(data[10]));    // emergency_contact_name
+                        patient.setEmergencyContactPhone(cleanField(data[11]));   // emergency_contact_phone
                         
-                        if (!data[12].isEmpty()) {
-                            patient.setRegistrationDate(LocalDate.parse(data[12], DATE_FORMATTER));
+                        // Parse registration date
+                        if (!cleanField(data[12]).isEmpty()) {
+                            try {
+                                patient.setRegistrationDate(LocalDate.parse(cleanField(data[12]), DATE_FORMATTER));
+                            } catch (DateTimeParseException e) {
+                                // Skip if can't parse
+                            }
                         }
                         
-                        if (data.length > 13 && !data[13].isEmpty()) {
-                            patient.setGpSurgeryId(data[13]);
+                        // GP surgery ID if present
+                        if (data.length > 13) {
+                            patient.setGpSurgeryId(cleanField(data[13]));
                         }
                         
                         patients.add(patient);
+                        successCount++;
+                        System.out.println("  ✓ Added patient: " + patient.getFullName());
                         
                     } catch (Exception e) {
-                        System.err.println("Error parsing line " + lineCount + ": " + e.getMessage());
+                        errorCount++;
+                        System.out.println("  ✗ Error on line " + lineNumber + ": " + e.getMessage());
                     }
+                } else {
+                    errorCount++;
+                    System.out.println("  ✗ Line " + lineNumber + " has only " + data.length + " columns (need 13+)");
                 }
             }
-            System.out.println("Successfully loaded " + patients.size() + " patients from " + filePath);
+            
+            System.out.println("\n=== LOADING SUMMARY ===");
+            System.out.println("Total lines processed: " + (lineNumber - 1));
+            System.out.println("Successfully loaded: " + successCount);
+            System.out.println("Errors: " + errorCount);
             
         } catch (IOException e) {
-            System.err.println("Error loading patients: " + e.getMessage());
+            System.err.println("File error: " + e.getMessage());
             return null;
         }
         
         return patients;
     }
     
-    // Method to be added in Week 2
-    public static List<Object> loadClinicians(String filePath) {
-        System.out.println("Clinician loading to be implemented in Week 2");
-        return new ArrayList<>();
+    /**
+     * Parse a CSV line, handling quoted fields
+     */
+    private static String[] parseCSVLine(String line) {
+        List<String> result = new ArrayList<>();
+        StringBuilder current = new StringBuilder();
+        boolean inQuotes = false;
+        
+        for (int i = 0; i < line.length(); i++) {
+            char c = line.charAt(i);
+            
+            if (c == '"') {
+                inQuotes = !inQuotes;
+            } else if (c == ',' && !inQuotes) {
+                result.add(current.toString());
+                current = new StringBuilder();
+            } else {
+                current.append(c);
+            }
+        }
+        result.add(current.toString());
+        
+        return result.toArray(new String[0]);
+    }
+    
+    /**
+     * Clean field - remove quotes and trim
+     */
+    private static String cleanField(String field) {
+        if (field == null) return "";
+        field = field.trim();
+        if (field.startsWith("\"") && field.endsWith("\"")) {
+            field = field.substring(1, field.length() - 1);
+        }
+        return field;
     }
 }

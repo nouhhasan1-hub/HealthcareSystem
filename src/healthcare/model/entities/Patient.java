@@ -1,4 +1,3 @@
-<<<<<<< HEAD
 package healthcare.model.entities;
 
 import java.time.LocalDate;
@@ -24,7 +23,7 @@ public class Patient extends BaseEntity {
         this.lastName = lastName;
     }
     
-    // Getters and setters
+    // Getters and Setters
     public String getFirstName() { return firstName; }
     public void setFirstName(String firstName) { this.firstName = firstName; }
     
@@ -73,6 +72,3 @@ public class Patient extends BaseEntity {
         return "Patient: " + getFullName() + " (NHS: " + nhsNumber + ")";
     }
 }
-=======
-[PASTE THE Patient.java CODE HERE]
->>>>>>> backup-branch
