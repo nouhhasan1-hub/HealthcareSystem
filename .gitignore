@@ -3,7 +3,6 @@
 *.tmp
 output/
 bin/
-!output/.gitkeep
 .DS_Store
 .idea/
 *.iml

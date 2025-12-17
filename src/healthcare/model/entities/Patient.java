@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 package healthcare.model.entities;
 
 import java.time.LocalDate;
@@ -72,3 +73,6 @@ public class Patient extends BaseEntity {
         return "Patient: " + getFullName() + " (NHS: " + nhsNumber + ")";
     }
 }
+=======
+[PASTE THE Patient.java CODE HERE]
+>>>>>>> backup-branch
